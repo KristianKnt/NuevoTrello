@@ -1,0 +1,121 @@
+
+<div id="formulario-container" class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h2 class="h4 mb-0">Crear tarea</h2>
+    </div>
+
+    <div class="card-body">
+        <form id="taskForm" novalidate>
+
+            <!-- Nombre de la tarea -->
+            <div class="mb-3">
+                <label for="name" class="form-label">
+                    Nombre de la tarea
+                </label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="name"
+                    name="nombre"
+                    placeholder="Ej. Desarrollar página de inicio"
+                    aria-describedby="nameHelp"
+                >
+                <div id="nameHelp" class="form-text">
+                    Debe tener más de 8 caracteres.
+                </div>
+            </div>
+
+            <!-- Descripción -->
+            <div class="mb-3">
+                <label for="description" class="form-label">
+                    Descripción
+                </label>
+                <textarea
+                    class="form-control"
+                    id="description"
+                    name="descripcion"
+                    rows="3"
+                    placeholder="Describe las actividades que se deben realizar"
+                ></textarea>
+                <div class="form-text">
+                    Debe tener más de 15 caracteres.
+                </div>
+            </div>
+
+            <!-- Responsable -->
+            <div class="mb-3">
+                <label for="assignedTo" class="form-label">
+                    Asignado a
+                </label>
+                <select
+                    class="form-select"
+                    id="assignedTo"
+                    name="asignadoA"
+                >
+                    <option value="">Selecciona un responsable</option>
+                    <option value="Peter Pan">Peter Pan</option>
+                    <option value="James Jeson">James Jeson</option>
+                    <option value="Brook Antes">Brook Antes</option>
+                    <option value="Cristian Rojas">Cristian Rojas</option>
+                </select>
+            </div>
+
+            <!-- Fecha de entrega -->
+            <div class="mb-3">
+                <label for="date" class="form-label">
+                    Fecha de entrega
+                </label>
+                <input
+                    type="date"
+                    class="form-control"
+                    id="date"
+                    name="fechaDeEntrega"
+                >
+            </div>
+
+            <!-- Estado -->
+            <div class="mb-3">
+                <label for="status" class="form-label">
+                    Estado
+                </label>
+                <select
+                    class="form-select"
+                    id="status"
+                    name="estado"
+                >
+                    <option value="">Selecciona un estado</option>
+                    <option value="POR HACER">Por hacer</option>
+                    <option value="EN PROCESO">En proceso</option>
+                    <option value="REVISIÓN">Revisión</option>
+                    <option value="HECHO">Hecho</option>
+                </select>
+            </div>
+
+            <!-- Mensajes de validación -->
+            <div
+                id="formErrors"
+                class="text-danger mb-3"
+                role="alert"
+                aria-live="polite"
+            ></div>
+
+            <!-- Confirmación -->
+            <div
+                id="formSuccess"
+                class="text-success mb-3"
+                role="status"
+                aria-live="polite"
+            ></div>
+
+            <!-- Botón de envío -->
+            <button type="submit" class="btn btn-primary">
+                Agregar tarea
+            </button>
+
+            <button type="reset" class="btn btn-outline-secondary">
+                Limpiar
+            </button>
+
+        </form>
+    </div>
+</div>
