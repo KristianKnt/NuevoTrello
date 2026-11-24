@@ -92,13 +92,33 @@ function crearTarjeta(task) {
 function renderizarTareas() {
     const lista = document.getElementById("taskList");
 
-    lista.replaceChildren();
-
-    taskManager.getAllTasks().forEach(task => {
-        lista.appendChild(crearTarjeta(task));
-    });
-
+    taskManager.render(lista);
     actualizarMensajeVacio();
+}
+
+// Delegar las acciones de las tarjetas en un único listener.
+function configurarListaTareas() {
+    const lista = document.getElementById("taskList");
+
+    lista.addEventListener("click", event => {
+        const boton = event.target.closest("button");
+        if (!boton) return;
+
+        const tarjeta = boton.closest("[data-task-id]");
+        if (!tarjeta) return;
+
+        const taskId = Number(tarjeta.dataset.taskId);
+        const tarea = taskManager.findTaskById(taskId);
+
+        if (boton.classList.contains("done-button") && tarea) {
+            tarea.estado = "HECHO";
+            taskManager.save();
+            renderizarTareas();
+        } else if (boton.classList.contains("delete-button") && taskManager.deleteTask(taskId)) {
+            taskManager.save();
+            renderizarTareas();
+        }
+    });
 }
 
 // Mostrar u ocultar el mensaje cuando no hay tareas.
@@ -143,11 +163,8 @@ function configurarFormulario() {
         console.log("Tarea creada:", tareaCreada);
         console.log("Todas las tareas:", taskManager.getAllTasks());
 
-        // Dibujar la tarjeta en la interfaz.
-        document.getElementById("taskList")
-            .appendChild(crearTarjeta(tareaCreada));
-
-        actualizarMensajeVacio();
+        // Dibujar la lista actualizada en la interfaz.
+        renderizarTareas();
 
         // Confirmar y limpiar el formulario.
         formSuccess.textContent = "¡Tarea agregada correctamente!";
@@ -159,6 +176,7 @@ function configurarFormulario() {
 async function inicializarApp() {
     await cargarComponente("formulario-container", "./formulario.html");
     configurarFormulario();
+    configurarListaTareas();
     renderizarTareas();
 }
 
