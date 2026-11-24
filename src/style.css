@@ -205,6 +205,29 @@ textarea.form-control {
     margin-top: auto;
 }
 
+/* Acciones de la tarjeta: botones uniformes y adaptables. */
+#taskList .task-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+    margin-top: auto;
+}
+
+#taskList .task-actions .btn {
+    flex: 1 1 10rem;
+    width: auto;
+    min-width: 0;
+    min-height: 40px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    white-space: nowrap;
+}
+
+#taskList .task-actions .btn-outline-danger {
+    margin-top: 0;
+}
+
 #emptyMessage {
     padding: 22px;
     text-align: center;
