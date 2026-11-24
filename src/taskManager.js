@@ -8,6 +8,25 @@ export class TaskManager {
         this.nextId = 1;
     }
 
+    // Guardar las tareas y el contador de identificadores.
+    save() {
+        localStorage.setItem("tasks", JSON.stringify(this.tasks));
+        localStorage.setItem("nextId", String(this.nextId));
+    }
+
+    // Cargar las tareas y el contador si ya existen datos guardados.
+    load() {
+        const savedTasks = localStorage.getItem("tasks");
+        if (savedTasks !== null) {
+            this.tasks = JSON.parse(savedTasks);
+        }
+
+        const savedNextId = localStorage.getItem("nextId");
+        if (savedNextId !== null) {
+            this.nextId = Number(savedNextId);
+        }
+    }
+
     // 1. Obtener todas las tareas.
     getAllTasks() {
         return this.tasks;

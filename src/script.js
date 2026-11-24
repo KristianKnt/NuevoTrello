@@ -4,6 +4,7 @@ import { TaskManager } from "./taskManager.js";
 
 // Crear el administrador de tareas.
 const taskManager = new TaskManager();
+taskManager.load();
 
 // Cargar un componente HTML externo.
 async function cargarComponente(id, archivo) {
@@ -66,6 +67,7 @@ function crearTarjeta(task) {
         const eliminada = taskManager.deleteTask(task.id);
 
         if (eliminada) {
+            taskManager.save();
             columna.remove();
             actualizarMensajeVacio();
         }
@@ -137,6 +139,7 @@ function configurarFormulario() {
 
         // Guardar la tarea en el administrador.
         const tareaCreada = taskManager.addTask(nuevaTarea);
+        taskManager.save();
         console.log("Tarea creada:", tareaCreada);
         console.log("Todas las tareas:", taskManager.getAllTasks());
 
