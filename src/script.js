@@ -1,12 +1,40 @@
 
 import { validateTaskForm } from "./validation.js";
-import { TaskManager } from "./taskManager.js";
 
-// Crear el administrador de tareas.
-const taskManager = new TaskManager();
-taskManager.load();
+import {
+    getTasks,
+    createTask,
+    updateTask,
+    getArchivedTasks,
+    archiveTask,
+    restoreTask
+} from "./api.js";
 
-// Cargar un componente HTML externo.
+// Almacenamiento temporal de las tareas recibidas desde el backend
+let tasks = [];
+let archivedTasks = [];
+
+// Estados disponibles para las tareas
+const estados = {
+    TODO: "Por hacer",
+    IN_PROGRESS: "En proceso",
+    REVIEW: "Revisión",
+    DONE: "Hecho"
+};
+
+// Convertir el estado del formulario al código utilizado por el backend
+function obtenerCodigoEstado(estado) {
+    const equivalencias = {
+        "POR HACER": "TODO",
+        "EN PROCESO": "IN_PROGRESS",
+        "REVISIÓN": "REVIEW",
+        "HECHO": "DONE"
+    };
+
+    return equivalencias[estado];
+}
+
+// Cargar componentes HTML externos
 async function cargarComponente(id, archivo) {
     const contenedor = document.getElementById(id);
 
@@ -18,6 +46,7 @@ async function cargarComponente(id, archivo) {
         }
 
         contenedor.innerHTML = await respuesta.text();
+
     } catch (error) {
         console.error("Error al cargar el componente:", error);
         contenedor.textContent = "No se pudo cargar el formulario.";
@@ -25,7 +54,7 @@ async function cargarComponente(id, archivo) {
     }
 }
 
-// Crear la tarjeta HTML de una tarea.
+// Crear tarjeta de una tarea activa
 function crearTarjeta(task) {
     const columna = document.createElement("div");
     columna.className = "col-12 col-md-6 col-lg-4";
@@ -39,37 +68,201 @@ function crearTarjeta(task) {
 
     const titulo = document.createElement("h3");
     titulo.className = "card-title h5";
-    titulo.textContent = task.nombre;
+    titulo.textContent = task.name;
 
     const descripcion = document.createElement("p");
     descripcion.className = "card-text";
-    descripcion.textContent = task.descripcion;
+    descripcion.textContent = task.description;
 
     const responsable = document.createElement("p");
     responsable.className = "mb-2";
-    responsable.textContent = `Asignado a: ${task.asignadoA}`;
+    responsable.textContent = `Asignado a: ${task.assignedTo}`;
 
     const fecha = document.createElement("p");
     fecha.className = "mb-2";
-    fecha.textContent = `Fecha de entrega: ${task.fechaDeEntrega}`;
+    fecha.textContent = `Fecha de entrega: ${task.dueDate}`;
+
+    const etiquetaEstado = document.createElement("label");
+    etiquetaEstado.className = "form-label";
+    etiquetaEstado.textContent = "Estado de la tarea";
+    etiquetaEstado.htmlFor = `estado-${task.id}`;
+
+    const selectorEstado = document.createElement("select");
+    selectorEstado.className = "form-select mb-3";
+    selectorEstado.id = `estado-${task.id}`;
+
+    Object.entries(estados).forEach(([codigo, nombre]) => {
+        const opcion = document.createElement("option");
+        opcion.value = codigo;
+        opcion.textContent = nombre;
+        selectorEstado.appendChild(opcion);
+    });
+
+    selectorEstado.value = task.status;
+
+    const mensaje = document.createElement("p");
+    mensaje.className = "small mb-2";
+    mensaje.setAttribute("role", "status");
+
+    // Actualizar estado de la tarea
+    selectorEstado.addEventListener("change", async () => {
+        const estadoAnterior = task.status;
+        const nuevoEstado = selectorEstado.value;
+
+        const tareaActualizada = {
+            name: task.name,
+            description: task.description,
+            assignedTo: task.assignedTo,
+            dueDate: task.dueDate,
+            status: nuevoEstado
+        };
+
+        selectorEstado.disabled = true;
+        mensaje.textContent = "Actualizando estado...";
+
+        try {
+            const respuesta = await updateTask(task.id, tareaActualizada);
+
+            const indice = tasks.findIndex(
+                tarea => tarea.id === task.id
+            );
+
+            if (indice !== -1) {
+                tasks[indice] = respuesta;
+            }
+
+            selectorEstado.value = respuesta.status;
+
+            mensaje.textContent = "Estado actualizado correctamente.";
+            mensaje.className = "small mb-2 text-success";
+
+        } catch (error) {
+            selectorEstado.value = estadoAnterior;
+
+            mensaje.textContent = error.message;
+            mensaje.className = "small mb-2 text-danger";
+
+            console.error("Error al actualizar el estado:", error);
+
+        } finally {
+            selectorEstado.disabled = false;
+        }
+    });
+
+    // Botón para archivar tarea
+    const botonArchivar = document.createElement("button");
+    botonArchivar.type = "button";
+    botonArchivar.className = "btn btn-outline-secondary btn-sm";
+    botonArchivar.textContent = "Archivar";
+
+    botonArchivar.addEventListener("click", async () => {
+        botonArchivar.disabled = true;
+        selectorEstado.disabled = true;
+
+        mensaje.textContent = "Archivando tarea...";
+        mensaje.className = "small mb-2 text-muted";
+
+        try {
+            await archiveTask(task.id);
+
+            tasks = tasks.filter(
+                tarea => tarea.id !== task.id
+            );
+
+            renderizarTareas();
+            await cargarTareasArchivadas();
+
+        } catch (error) {
+            mensaje.textContent = error.message;
+            mensaje.className = "small mb-2 text-danger";
+
+            botonArchivar.disabled = false;
+            selectorEstado.disabled = false;
+
+            console.error("Error al archivar la tarea:", error);
+        }
+    });
+
+    contenido.append(
+        titulo,
+        descripcion,
+        responsable,
+        fecha,
+        etiquetaEstado,
+        selectorEstado,
+        mensaje,
+        botonArchivar
+    );
+
+    tarjeta.appendChild(contenido);
+    columna.appendChild(tarjeta);
+
+    return columna;
+}
+
+// Crear tarjeta de una tarea archivada
+function crearTarjetaArchivada(task) {
+    const columna = document.createElement("div");
+    columna.className = "col-12 col-md-6 col-lg-4";
+
+    const tarjeta = document.createElement("article");
+    tarjeta.className = "card h-100 shadow-sm";
+
+    const contenido = document.createElement("div");
+    contenido.className = "card-body";
+
+    const titulo = document.createElement("h3");
+    titulo.className = "card-title h5";
+    titulo.textContent = task.name;
+
+    const descripcion = document.createElement("p");
+    descripcion.className = "card-text";
+    descripcion.textContent = task.description;
+
+    const responsable = document.createElement("p");
+    responsable.className = "mb-2";
+    responsable.textContent = `Asignado a: ${task.assignedTo}`;
+
+    const fecha = document.createElement("p");
+    fecha.className = "mb-2";
+    fecha.textContent = `Fecha de entrega: ${task.dueDate}`;
 
     const estado = document.createElement("p");
     estado.className = "mb-3";
-    estado.textContent = `Estado: ${task.estado}`;
+    estado.textContent = `Estado: ${estados[task.status]}`;
 
-    const botonEliminar = document.createElement("button");
-    botonEliminar.type = "button";
-    botonEliminar.className = "btn btn-outline-danger btn-sm";
-    botonEliminar.textContent = "Eliminar";
+    const mensaje = document.createElement("p");
+    mensaje.className = "small mb-2";
+    mensaje.setAttribute("role", "status");
 
-    // Eliminar la tarea cuando se pulse el botón.
-    botonEliminar.addEventListener("click", () => {
-        const eliminada = taskManager.deleteTask(task.id);
+    // Botón para restaurar tarea
+    const botonRestaurar = document.createElement("button");
+    botonRestaurar.type = "button";
+    botonRestaurar.className = "btn btn-outline-primary btn-sm";
+    botonRestaurar.textContent = "Restaurar";
 
-        if (eliminada) {
-            taskManager.save();
-            columna.remove();
-            actualizarMensajeVacio();
+    botonRestaurar.addEventListener("click", async () => {
+        botonRestaurar.disabled = true;
+        mensaje.textContent = "Restaurando tarea...";
+        mensaje.className = "small mb-2 text-muted";
+
+        try {
+            await restoreTask(task.id);
+
+            archivedTasks = archivedTasks.filter(
+                tarea => tarea.id !== task.id
+            );
+
+            await cargarTareas();
+            renderizarTareasArchivadas();
+
+        } catch (error) {
+            mensaje.textContent = error.message;
+            mensaje.className = "small mb-2 text-danger";
+
+            botonRestaurar.disabled = false;
+
+            console.error("Error al restaurar la tarea:", error);
         }
     });
 
@@ -79,7 +272,8 @@ function crearTarjeta(task) {
         responsable,
         fecha,
         estado,
-        botonEliminar
+        mensaje,
+        botonRestaurar
     );
 
     tarjeta.appendChild(contenido);
@@ -88,40 +282,34 @@ function crearTarjeta(task) {
     return columna;
 }
 
-// Dibujar todas las tareas almacenadas en el array.
+// Mostrar tareas activas
 function renderizarTareas() {
     const lista = document.getElementById("taskList");
 
-    taskManager.render(lista);
+    lista.replaceChildren();
+
+    tasks.forEach(task => {
+        lista.appendChild(crearTarjeta(task));
+    });
+
     actualizarMensajeVacio();
 }
 
-// Delegar las acciones de las tarjetas en un único listener.
-function configurarListaTareas() {
-    const lista = document.getElementById("taskList");
+// Mostrar tareas archivadas
+function renderizarTareasArchivadas() {
+    const lista = document.getElementById("archivedTaskList");
+    const mensaje = document.getElementById("archivedEmptyMessage");
 
-    lista.addEventListener("click", event => {
-        const boton = event.target.closest("button");
-        if (!boton) return;
+    lista.replaceChildren();
 
-        const tarjeta = boton.closest("[data-task-id]");
-        if (!tarjeta) return;
-
-        const taskId = Number(tarjeta.dataset.taskId);
-        const tarea = taskManager.findTaskById(taskId);
-
-        if (boton.classList.contains("done-button") && tarea) {
-            tarea.estado = "HECHO";
-            taskManager.save();
-            renderizarTareas();
-        } else if (boton.classList.contains("delete-button") && taskManager.deleteTask(taskId)) {
-            taskManager.save();
-            renderizarTareas();
-        }
+    archivedTasks.forEach(task => {
+        lista.appendChild(crearTarjetaArchivada(task));
     });
+
+    mensaje.hidden = archivedTasks.length > 0;
 }
 
-// Mostrar u ocultar el mensaje cuando no hay tareas.
+// Actualizar mensaje cuando no hay tareas activas
 function actualizarMensajeVacio() {
     const lista = document.getElementById("taskList");
     const mensaje = document.getElementById("emptyMessage");
@@ -129,12 +317,40 @@ function actualizarMensajeVacio() {
     mensaje.hidden = lista.children.length > 0;
 }
 
-// Conectar los eventos del formulario.
+// Consultar tareas activas desde el backend
+async function cargarTareas() {
+    try {
+        tasks = await getTasks();
+        renderizarTareas();
+
+    } catch (error) {
+        console.error("Error al cargar las tareas:", error);
+
+        document.getElementById("emptyMessage").textContent =
+            "No fue posible cargar las tareas del servidor.";
+    }
+}
+
+// Consultar tareas archivadas desde el backend
+async function cargarTareasArchivadas() {
+    try {
+        archivedTasks = await getArchivedTasks();
+        renderizarTareasArchivadas();
+
+    } catch (error) {
+        console.error("Error al cargar tareas archivadas:", error);
+
+        const mensaje = document.getElementById("archivedEmptyMessage");
+        mensaje.textContent = "No fue posible cargar las tareas archivadas.";
+        mensaje.hidden = false;
+    }
+}
+
+// Configurar formulario para registrar tareas
 function configurarFormulario() {
     const formulario = document.getElementById("taskForm");
 
-    formulario.addEventListener("submit", event => {
-        console.log("Se detectó el envío del formulario");
+    formulario.addEventListener("submit", async event => {
         event.preventDefault();
 
         const formErrors = document.getElementById("formErrors");
@@ -143,41 +359,52 @@ function configurarFormulario() {
         formErrors.textContent = "";
         formSuccess.textContent = "";
 
-        // Validar antes de crear la tarea.
         if (!validateTaskForm()) {
             return;
         }
 
-        // Obtener los valores del formulario.
         const nuevaTarea = {
-            nombre: document.getElementById("name").value.trim(),
-            descripcion: document.getElementById("description").value.trim(),
-            asignadoA: document.getElementById("assignedTo").value,
-            fechaDeEntrega: document.getElementById("date").value,
-            estado: document.getElementById("status").value
+            name: document.getElementById("name").value.trim(),
+            description: document.getElementById("description").value.trim(),
+            assignedTo: document.getElementById("assignedTo").value,
+            dueDate: document.getElementById("date").value,
+            status: obtenerCodigoEstado(
+                document.getElementById("status").value
+            )
         };
 
-        // Guardar la tarea en el administrador.
-        const tareaCreada = taskManager.addTask(nuevaTarea);
-        taskManager.save();
-        console.log("Tarea creada:", tareaCreada);
-        console.log("Todas las tareas:", taskManager.getAllTasks());
+        try {
+            const tareaCreada = await createTask(nuevaTarea);
 
-        // Dibujar la lista actualizada en la interfaz.
-        renderizarTareas();
+            tasks.push(tareaCreada);
+            renderizarTareas();
 
-        // Confirmar y limpiar el formulario.
-        formSuccess.textContent = "¡Tarea agregada correctamente!";
-        formulario.reset();
+            formSuccess.textContent = "¡Tarea agregada correctamente!";
+            formulario.reset();
+
+        } catch (error) {
+            console.error("Error al crear la tarea:", error);
+            formErrors.textContent = error.message;
+        }
     });
 }
 
-// Inicializar la aplicación.
+// Inicializar aplicación
 async function inicializarApp() {
-    await cargarComponente("formulario-container", "./formulario.html");
-    configurarFormulario();
-    configurarListaTareas();
-    renderizarTareas();
+    try {
+        await cargarComponente(
+            "formulario-container",
+            "./formulario.html"
+        );
+
+        configurarFormulario();
+
+        await cargarTareas();
+        await cargarTareasArchivadas();
+
+    } catch (error) {
+        console.error("No fue posible iniciar la aplicación:", error);
+    }
 }
 
 inicializarApp();
