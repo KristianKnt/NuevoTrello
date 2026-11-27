@@ -1,5 +1,6 @@
 
-const API_URL = "http://localhost:8080/api/tasks";
+//const API_URL = "http://localhost:8080/api/tasks";
+const API_URL = "https://planeador-backend-83b29.containers.snapdeploy.app/api/tasks";
 
 // Consultar todas las tareas activas
 export async function getTasks() {
