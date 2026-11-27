@@ -19,8 +19,11 @@
 </head>
 
 <body>
+
+    <!-- Encabezado -->
     <header class="container py-4">
         <h1>Planificador de tareas</h1>
+
         <p class="text-secondary">
             Organiza tus tareas, responsables y fechas de entrega.
         </p>
@@ -28,33 +31,55 @@
 
     <main class="container pb-5">
 
-        <!-- Aquí se cargará formulario.html -->
+        <!-- Formulario de registro -->
         <section aria-label="Formulario de tareas">
             <div id="formulario-container"></div>
         </section>
 
-        <!-- Aquí aparecerán las tarjetas -->
+        <!-- Lista de tareas activas -->
         <section class="mt-5" aria-labelledby="tasksTitle">
-            <h2 id="tasksTitle">Lista de tareas</h2>
+
+            <h2 id="tasksTitle" class="mb-4">
+                Lista de tareas
+            </h2>
 
             <div id="taskList" class="row g-3">
-                <!-- JavaScript insertará las tarjetas aquí -->
+                <!-- JavaScript insertará las tareas activas -->
             </div>
 
             <p id="emptyMessage" class="text-secondary mt-3">
                 Todavía no hay tareas registradas.
             </p>
+
+        </section>
+
+        <!-- Lista de tareas archivadas -->
+        <section class="mt-5" aria-labelledby="archivedTasksTitle">
+
+            <h2 id="archivedTasksTitle" class="mb-4">
+                Tareas archivadas
+            </h2>
+
+            <div id="archivedTaskList" class="row g-3">
+                <!-- JavaScript insertará las tareas archivadas -->
+            </div>
+
+            <p id="archivedEmptyMessage" class="text-muted">
+                No tienes tareas archivadas.
+            </p>
+
         </section>
 
     </main>
 
     <!-- Bootstrap JavaScript -->
     <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-    ></script>
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+    </script>
 
     <!-- Aplicación JavaScript -->
     <script type="module" src="./script.js"></script>
+
 </body>
 
 </html>
